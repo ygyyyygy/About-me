@@ -2023,6 +2023,147 @@ window.addEventListener('touchmove', (e) => {
     touchStartY_contact = touchEndY;
   }
 }, { passive: true });
+
+
+// ================================================================
+// УПРАВЛЕНИЕ URL ДЛЯ ПАНЕЛЕЙ (ДОБАВИТЬ В КОНЕЦ СКРИПТА)
+// ================================================================
+
+// Соответствие между panelId и URL-путём
+const panelToPath = {
+    'contactPanel': 'contact',
+    'websitesPanel': 'websites',
+    'designPanel': 'design',
+    'portfolioPanel': 'portfolio'
+};
+
+// Обратное соответствие: путь → panelId
+const pathToPanel = {
+    'contact': 'contactPanel',
+    'websites': 'websitesPanel',
+    'design': 'designPanel',
+    'portfolio': 'portfolioPanel'
+};
+
+// Обновляет URL в адресной строке без перезагрузки страницы
+function updateURLForPanel(panelId) {
+    const path = panelToPath[panelId];
+    if (path) {
+        window.history.pushState({ panel: panelId }, '', '/' + path);
+    }
+}
+
+// Очищает URL (возвращает на корень сайта)
+function clearURL() {
+    window.history.pushState({ panel: null }, '', '/');
+}
+
+// Открывает панель по URL-пути (вызывается при загрузке страницы)
+function openPanelFromURL() {
+    const path = window.location.pathname.substring(1);
+    
+    if (path && pathToPanel[path]) {
+        const panelId = pathToPanel[path];
+        const panel = document.getElementById(panelId);
+        if (panel && !panel.classList.contains('show')) {
+            openInfoPanelById(panelId);
+        }
+    }
+}
+
+// Сохраняем ОРИГИНАЛЬНУЮ функцию openInfoPanelById
+const originalOpenInfoPanelById = openInfoPanelById;
+
+// ПЕРЕОПРЕДЕЛЯЕМ функцию openInfoPanelById (добавляем обновление URL)
+openInfoPanelById = function(panelId) {
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+
+    titleContainer.style.opacity = '0';
+    titleContainer.style.transform = 'translate(-50%, -150%)';
+    titleContainer.style.pointerEvents = 'none';
+
+    guisWrapper.style.opacity = '0';
+    guisWrapper.style.pointerEvents = 'none';
+
+    panel.classList.remove('hide');
+    panel.classList.add('show');
+
+    hasEnteredContactView = true;
+    scrollingEnabled = true;
+    wheelCooldownUntil = Date.now() + 900;
+    
+    // 👇 НОВАЯ СТРОЧКА: обновляем URL
+    updateURLForPanel(panelId);
+    
+    // Генерация случайной цитаты для контента
+    const quotes = [
+        "💡 Код — это поэзия, только с синтаксисом",
+        "🚀 Сделаем твой сайт быстрее, чем кофе остынет",
+        "🎨 Дизайн — это не просто картинки, это эмоции",
+        "⚡ 99% багов уже исправлены, остальные — фичи",
+        "🍕 Пицца + код = лучший вечер"
+    ];
+    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+    const existingQuote = panel.querySelector('.quote-box');
+    if (existingQuote && !panelId.includes('contact')) {
+        existingQuote.innerHTML = `✨ ${randomQuote}`;
+    }
+};
+
+// Сохраняем ОРИГИНАЛЬНУЮ функцию exitContactView
+const originalExitContactView = exitContactView;
+
+// ПЕРЕОПРЕДЕЛЯЕМ функцию exitContactView (добавляем очистку URL)
+exitContactView = function() {
+    if (!hasEnteredContactView) return;
+    hasEnteredContactView = false;
+
+    const shownInfoPanels = document.querySelectorAll('.infoPanel.show');
+    shownInfoPanels.forEach(p => {
+        p.classList.remove('show');
+        p.classList.add('hide');
+        setTimeout(() => p.classList.remove('hide'), 420);
+    });
+
+    // 👇 НОВАЯ СТРОЧКА: очищаем URL
+    clearURL();
+
+    setTimeout(() => {
+        titleContainer.style.opacity = '0';
+        titleContainer.style.transform = 'translate(-50%, -150%)';
+        titleContainer.style.pointerEvents = 'none';
+
+        guisWrapper.style.opacity = '1';
+        guisWrapper.style.pointerEvents = 'auto';
+        scrollingEnabled = true;
+        wheelCooldownUntil = Date.now() + 900;
+    }, 420);
+};
+
+// Обработчик для кнопок "Назад" и "Вперёд" в браузере
+window.addEventListener('popstate', (event) => {
+    if (event.state && event.state.panel) {
+        const panelId = event.state.panel;
+        const panel = document.getElementById(panelId);
+        if (panel && !panel.classList.contains('show')) {
+            openInfoPanelById(panelId);
+        }
+    } else {
+        if (hasEnteredContactView) {
+            exitContactView();
+        } else if (currentView === 'guis') {
+            transitionToTitle();
+        }
+    }
+});
+
+// При загрузке страницы проверяем URL и открываем нужную панель
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', openPanelFromURL);
+} else {
+    openPanelFromURL();
+}
 </script>
 </body>
 </html>
