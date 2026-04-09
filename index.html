@@ -1233,6 +1233,12 @@ body::-webkit-scrollbar {
   background: rgba(255,255,255,0.2);
   transform: scale(1.05);
 }
+
+body.panel-open #firstView {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
   </style>
 </head>
 <body>
@@ -1429,6 +1435,33 @@ let wheelCooldownUntil = 0;
 let scrollingEnabled = true;
 
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
+// ================================================================
+// МГНОВЕННОЕ СКРЫТИЕ ПЕРВОГО ЭКРАНА ПРИ ПРЯМОМ ПЕРЕХОДЕ
+// ================================================================
+
+(function() {
+    // Проверяем URL прямо сейчас (до загрузки DOM)
+    const currentPath = window.location.pathname.substring(1);
+    const isPanelPath = currentPath === 'contact' || currentPath === 'websites' || 
+                        currentPath === 'design' || currentPath === 'portfolio';
+    
+    if (isPanelPath) {
+        // Добавляем класс к body, который скрывает первый экран через CSS
+        document.body.classList.add('panel-open');
+        
+        // Также сразу скрываем firstView, если он уже есть в DOM
+        const firstViewElement = document.getElementById('firstView');
+        if (firstViewElement) {
+            firstViewElement.style.display = 'none';
+            firstViewElement.style.opacity = '0';
+            firstViewElement.style.visibility = 'hidden';
+        }
+        
+        // Отмечаем, что мы уже во втором экране
+        window.__forceSecondView = true;
+    }
+})();
 
 // ================================================================
 // ФИКС ПРЯМОГО ОТКРЫТИЯ ПАНЕЛЕЙ ПО URL
@@ -2146,9 +2179,55 @@ function openPanelFromURL() {
     
     if (path && pathToPanel[path]) {
         const panelId = pathToPanel[path];
-        const panel = document.getElementById(panelId);
-        if (panel && !panel.classList.contains('show')) {
-            openInfoPanelById(panelId);
+        
+        // Убираем класс panel-open, чтобы стили не мешали нормальной работе
+        document.body.classList.remove('panel-open');
+        
+        // Принудительно показываем второй экран в режиме GUI (без анимации)
+        if (!hasEnteredSecondView) {
+            // Мгновенно скрываем первый экран без анимации
+            if (firstView) {
+                firstView.style.display = 'none';
+                firstView.style.opacity = '0';
+                firstView.style.visibility = 'hidden';
+                firstView.classList.add('hidden');
+            }
+            
+            // Показываем второй экран
+            if (secondView) {
+                secondView.classList.add('visible');
+            }
+            
+            hasEnteredSecondView = true;
+            
+            // Скрываем заголовок, показываем GUI
+            if (titleContainer) {
+                titleContainer.style.opacity = '0';
+                titleContainer.style.transform = 'translate(-50%, -150%)';
+                titleContainer.style.pointerEvents = 'none';
+            }
+            if (guisWrapper) {
+                guisWrapper.style.opacity = '1';
+                guisWrapper.style.pointerEvents = 'auto';
+            }
+            currentView = 'guis';
+        }
+        
+        // Открываем панель
+        setTimeout(() => {
+            const panel = document.getElementById(panelId);
+            if (panel && !panel.classList.contains('show')) {
+                openInfoPanelById(panelId);
+            }
+        }, 50);
+    } else if (window.__forceSecondView) {
+        // Если был прямой переход, но путь не панельный — возвращаем нормальное состояние
+        document.body.classList.remove('panel-open');
+        const firstViewElement = document.getElementById('firstView');
+        if (firstViewElement) {
+            firstViewElement.style.display = '';
+            firstViewElement.style.opacity = '';
+            firstViewElement.style.visibility = '';
         }
     }
 }
