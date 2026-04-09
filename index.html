@@ -1788,6 +1788,8 @@ function closeAnyPanel(panelId) {
   panel.classList.remove('show');
   panel.classList.add('hide');
   setTimeout(() => panel.classList.remove('hide'), 420);
+
+  clearURL();
   
   if (panelId !== 'contactPanel') {
     setTimeout(() => {
