@@ -1431,6 +1431,86 @@ let scrollingEnabled = true;
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
 
 // ================================================================
+// ФИКС ПРЯМОГО ОТКРЫТИЯ ПАНЕЛЕЙ ПО URL
+// ================================================================
+
+// Переопределяем функцию, которая показывает первый экран
+// Добавляем проверку: если в URL есть путь панели — сразу переходим ко второму экрану и открываем панель
+const originalTriggerFirstExit = triggerFirstExit;
+window.triggerFirstExit = function() {
+    // Проверяем, не нужно ли сразу открыть панель
+    const currentPath = window.location.pathname.substring(1);
+    const isPanelPath = currentPath && (currentPath === 'contact' || currentPath === 'websites' || currentPath === 'design' || currentPath === 'portfolio');
+    
+    if (isPanelPath) {
+        // Если это путь панели — сразу переходим ко второму экрану, минуя анимацию приветствия
+        if (!hasEnteredSecondView) {
+            firstView.classList.add('hidden');
+            secondView.classList.add('visible');
+            hasEnteredSecondView = true;
+            
+            // Сразу показываем GUI (скрываем заголовок)
+            titleContainer.style.opacity = '0';
+            titleContainer.style.transform = 'translate(-50%, -150%)';
+            titleContainer.style.pointerEvents = 'none';
+            guisWrapper.style.opacity = '1';
+            guisWrapper.style.pointerEvents = 'auto';
+            currentView = 'guis';
+            
+            // Открываем нужную панель
+            setTimeout(() => {
+                const panelId = pathToPanel[currentPath];
+                if (panelId) {
+                    openInfoPanelById(panelId);
+                }
+            }, 100);
+        }
+        return;
+    }
+    
+    // Иначе стандартное поведение
+    if (originalTriggerFirstExit) {
+        originalTriggerFirstExit();
+    }
+};
+
+// Также исправляем инициализацию при загрузке страницы
+// Добавляем этот код после определения всех функций, но до вызова openPanelFromURL
+const originalDOMContentLoaded = window.onload || document.addEventListener('DOMContentLoaded', () => {});
+window.addEventListener('DOMContentLoaded', () => {
+    // Проверяем путь при загрузке
+    const currentPath = window.location.pathname.substring(1);
+    const isPanelPath = currentPath && (currentPath === 'contact' || currentPath === 'websites' || currentPath === 'design' || currentPath === 'portfolio');
+    
+    if (isPanelPath) {
+        // Если это путь панели — скрываем первый экран мгновенно
+        if (firstView && !hasEnteredSecondView) {
+            firstView.style.opacity = '0';
+            firstView.style.pointerEvents = 'none';
+            firstView.classList.add('hidden');
+            secondView.classList.add('visible');
+            hasEnteredSecondView = true;
+            
+            // Показываем GUI
+            titleContainer.style.opacity = '0';
+            titleContainer.style.transform = 'translate(-50%, -150%)';
+            titleContainer.style.pointerEvents = 'none';
+            guisWrapper.style.opacity = '1';
+            guisWrapper.style.pointerEvents = 'auto';
+            currentView = 'guis';
+            
+            // Открываем панель
+            setTimeout(() => {
+                const panelId = pathToPanel[currentPath];
+                if (panelId) {
+                    openInfoPanelById(panelId);
+                }
+            }, 50);
+        }
+    }
+});
+
+// ================================================================
 // CUSTOM CURSOR (DESKTOP ONLY)
 // ================================================================
 if (!isMobile) {
